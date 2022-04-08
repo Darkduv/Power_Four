@@ -5,22 +5,21 @@ from SuperMatrix import *
 ###########################################
 #  Power Four                             #
 #  coded by Maximin Duvillard             #
-#  references : none yet at this time     #
+#  references : none yet                  #
 #                                         #
-#  version of february 2016               #
-#        completed in september           #
-#          Two Players                    #
+#  version of february of 2016            #
+#                                         #
+#           with an A.I.                  #
 #                                         #
 ###########################################
 
-
-# Todo : possibilities of variations :
-# Todo : - bigger power like power five in a greater grid
-# Todo : - more than 2 players ?
-# Todo : log-in for record and/or play with scores ..
-# Todo 2: a better way to code the search of a victory ??
-
-# Todo 1: keyboard shortcuts like cmd + U for Undo, etc...  -> Partly done
+# Todo: Change first color ?
+# Todo: change player when victory ...
+# Fixme: bad function undo_move ... to check.
+# Fixme: big big problem in restart ...
+# Todo: human player is not supposed to always start, which is the case here ??
+# Todo: let the human player the possibility to choose whether or not he chooses to start first??
+# Todo: keyboard shortcuts for undo, restart, etc. ??
 
 class MenuBar(Frame):
     """bar of menu rolling"""
@@ -55,7 +54,7 @@ class MenuBar(Frame):
 
 
 class Panel(Frame):
-    """Panel de jeu (grille de n x m cases)"""
+    """Panel for the game (n x m grid)"""
 
     def __init__(self):
         # Red = 0 and Yellow = 1
@@ -65,7 +64,8 @@ class Panel(Frame):
         # cases (squared) of the grid, et the dimensions of the
         # canvas are adapted in consequence.
         Frame.__init__(self)
-        self.n_lig, self.n_col = 6, 7  # initial grid = 6*7
+        self.computer = 0
+        self.n_lig, self.n_col = 6, 7  # initial grid = 4 x 4
         # Link of the event <resize> with an adapted manager :
         self.bind("<Configure>", self.rescale)
         # Canvas :
@@ -88,8 +88,8 @@ class Panel(Frame):
         self.can_bis.pack(side=RIGHT)
         self.player = 1  # TODO = to change color of first player.
         self.state = SuperMatrix(2, self.n_lig, self.n_col)  # construction of a list of lists
-        self.game = []
-        self.history = []
+        self.game = SuperList()
+        # self.history = []
         self.coup = 0
         self.width, self.height = 2, 2
         self.cote = 0
@@ -158,6 +158,10 @@ class Panel(Frame):
         """Management of the mouse click : return the pawns"""
         # We start to determinate the line and the columns :
         lig, col = int(event.y / self.cote), int(event.x / self.cote)
+        if self.player == 1:  # the human is Yellow
+            self.play_game(col, lig)
+
+    def play(self, col, lig=0):
         if 0 <= lig < self.n_lig and 0 <= col < self.n_col:
             # maximal width and height possibles for the cases :
             l_max = self.width / self.n_col
@@ -184,13 +188,10 @@ class Panel(Frame):
 
             if 1 <= n <= self.n_lig:
                 self.state[n - 1][col] = self.player
-                self.history.append([n-1, col, self.player])
+                # self.history.append([n-1, col, self.player])
                 self.coup += 1
                 if not self.display_victory():
-                    try:
-                        self.game[self.coup] = self.state.copy()
-                    except IndexError:
-                        self.game.append(self.state.copy())
+                    self.game[self.coup] = self.state.copy()
                     self.player += 1
                     self.player %= 2
                     # self.can_bis.destroy()
@@ -205,12 +206,108 @@ class Panel(Frame):
                 else:
                     self.can_bis.itemconfig(self.turn, text=["Red", "Yellow"][self.player] + "\nwins !!")
                     self.can_bis.delete(self.turn_bis)
-                    try:
-                        self.game[self.coup] = self.state.copy()
-                    except IndexError:
-                        self.game.append(self.state.copy())
+                    self.win = True
+                    self.game[self.coup] = self.state.copy()
                     self.player += 1
                     self.player %= 2
+
+                return True
+            else:
+                return False
+
+        else:
+            return False
+
+    def play_game(self, col, lig):
+        # here computer is Red and human yellow
+        if self.play(col, lig) and not self.win:
+            list_col = self.col_possible()
+            if list_col:
+                # t = randint(0, len(list_col)-1)
+                # self.play(list_col[t])  # Todo :
+                play = self.brut_force(2)  # here to change the difficulty and the time spent by the computer to think
+                self.play(play[0][0])
+
+    def col_possible(self):
+        return [i for i in range(self.n_col) if self.state[0][i] == 2]
+
+    def coups_possibles(self):
+        ll = SuperList()
+        for i in self.col_possible():
+            for j in range(self.n_lig):
+                if self.state[j][i] == 2:
+                    ll[i] = [i, j]
+        return ll
+
+    def brut_force(self, proof):
+        save = self.state.copy()
+        list_weight = ListWeight()
+
+        if proof == 0:
+            for i in self.coups_possibles().copy():
+                self.state[i[1]][i[0]] = 0  # Computer is 0 (Red) here
+                if self.victory_threaten():
+                    self.state = save.copy()
+                    list_weight.append([i, 10])
+                    self.player = 0
+                    self.state = save.copy()
+                    break
+                else:
+                    self.player = 1
+                    ll = self.coups_possibles().copy()
+                    if ll:
+                        save2 = self.state.copy()
+                        list_weight2 = ListWeight()
+                        for j in ll:
+                            self.state[j[1]][j[0]] = 1
+                            if self.victory_threaten():
+                                list_weight2.append([j, -10])
+                                self.state = save2.copy()
+                                break
+                            else:
+                                list_weight2.append([j, 0])
+                            self.state = save2.copy()
+                        list_weight.append([i, list_weight2.position_weight_min()[1]])
+                    else:
+                        list_weight.append([i, 0])
+                self.player = 0
+                self.state = save.copy()
+            return list_weight.position_weight_max()
+
+        for i in self.coups_possibles().copy():
+            self.state[i[1]][i[0]] = 0  # Computer is 0 (Red) here
+            if self.victory_threaten():
+                self.state = save.copy()
+                list_weight.append([i, 50])
+                self.player = 0
+                self.state = save.copy()
+                break
+            else:
+                self.player = 1
+                ll = self.coups_possibles().copy()
+                if ll:
+                    save2 = self.state.copy()
+                    list_weight2 = ListWeight()
+                    for j in ll:
+                        self.state[j[1]][j[0]] = 1
+                        if self.victory_threaten():
+                            list_weight2.append([j, -50])
+                            self.state = save2.copy()
+                            self.player = 1
+                            break
+                        else:
+                            maxi = self.brut_force(proof-1)
+                            if maxi:
+                                list_weight2.append([j, maxi[1]])
+                        self.state = save2.copy()
+                        self.player = 1
+                    mini = list_weight2.position_weight_min()
+                    list_weight.append([i, mini[1]])
+                else:
+                    list_weight.append([i, 0])
+                self.player = 0
+                self.state = save.copy()
+        return list_weight.position_weight_max()
 
     def victory_threaten(self):
         # Todo : threaten.... ??
@@ -255,12 +352,12 @@ class Panel(Frame):
 
 
 class Ping(Frame):
-    """corps principal du programme"""
+    """main program"""
 
     def __init__(self, root):
         Frame.__init__(self, root)
         self.master.geometry("400x300")
-        self.master.title(" Game of power four - Two Player")
+        self.master.title(" Game of power four - One Player")
 
         self.m_bar = MenuBar(self)
         self.m_bar.pack(side=TOP, expand=NO, fill=X)
@@ -309,11 +406,16 @@ class Ping(Frame):
             pass
 
     def undo(self, event=None):
-        if self.jeu.coup > 0:
-            self.jeu.coup -= 1
-            self.jeu.player += 1
-            self.jeu.player %= 2
-            self.jeu.init_jeu(self.jeu.game[self.jeu.coup].copy())
+        # here undo only if red = computer and yellow = human (and undo -> for human)
+        if self.jeu.player == 1:
+            if self.jeu.coup > 1:
+                self.jeu.coup -= 2
+                self.jeu.init_jeu(self.jeu.game[self.jeu.coup].copy())
+        else:
+            if self.jeu.coup > 0:
+                self.jeu.coup -= 1
+                self.jeu.player = 1
+                self.jeu.init_jeu(self.jeu.game[self.jeu.coup].copy())
         if event:
             pass
 
@@ -338,8 +440,8 @@ class Ping(Frame):
         """window-message indicating the author and the type of licence"""
         msg = Toplevel(self)
         Message(msg, width=200, aspect=100, justify=CENTER,
-                text="Jeu de Power_Four\n\n by M.Duvillard.\n"
-                     "Licence = ???").pack(padx=10, pady=10)
+                text="Jeu de Power_Four\n\n by Maximin D.\n"
+                     "Licence = None").pack(padx=10, pady=10)
 
 
 if __name__ == '__main__':
