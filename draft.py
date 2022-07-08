@@ -20,9 +20,10 @@ NB_IN_A_ROW = 4
 COL_PLAYERS = [BLACK, RED, YELLOW]
 
 SQUARE_SIZE = 100
+RADIUS = SQUARE_SIZE // 2 - 5
+
 SIZE_FONT = 75
 NAME_FONT = "monospace"
-RADIUS = SQUARE_SIZE // 2 - 5
 
 NB_PLAYERS = 2
 
@@ -31,76 +32,128 @@ class InvalidMoveError(Exception):
     """Custom error for invalid moves."""
 
 
-def init_pygame():
-    nb_pass, nb_fail = pygame.init()
-    print(f"Pygame init done, {nb_pass} module(s) passed, {nb_fail} failed.")
+class NotSetUpError(Exception):
+    """Custom error raised when accessing something that is not set up."""
 
 
-def setup_font(name: str = NAME_FONT, size: int = SIZE_FONT)\
-        -> pygame.font.Font:
-    return pygame.font.SysFont(name, size)
+class Grid:
+    """Stores the grid of power four"""
 
+    def __init__(self, nb_rows: int = 6,
+                 nb_cols: int = 7):
+        self.board = np.zeros((nb_rows, nb_cols), dtype=int)
+        self.nb_rows = nb_rows
+        self.nb_cols = nb_cols
 
-def setup_screen(width: int, height: int) -> pygame.Surface:
-    return pygame.display.set_mode((width, height))
+    def reset_board(self):
+        self.board[:, :] = 0
 
+    def is_valid_location(self, col: int) -> bool:
+        """Checks if a column is a valid location for a piece."""
+        return self.board[self.nb_rows - 1, col] == 0
 
-def create_board() -> np.ndarray:
-    board = np.zeros((ROW_COUNT, COLUMN_COUNT), dtype=int)
-    return board
+    def get_next_open_row(self, col: int) -> int:
+        """Finds the first row where a new piece can go.
 
+        This row must be a valid location"""
+        for r in range(self.nb_rows):
+            if self.board[r, col] == 0:
+                return r
+        raise InvalidMoveError("This column is filled. Please try another.")
 
-def drop_piece(board: np.ndarray, col: int, id_player: int):
-    """Drop the piece in the column."""
-    row = get_next_open_row(board, col)
-    board[row, col] = id_player
+    def drop_piece(self, col: int, id_player: int):
+        """Drop the piece in the column."""
+        row = self.get_next_open_row(col)
+        self.board[row, col] = id_player
 
+    def print_board(self):
+        print(np.flip(self.board, 0))
 
-def is_valid_location(board: np.ndarray, col: int) -> bool:
-    """Checks if a column is a valid location for a piece."""
-    return board[ROW_COUNT - 1, col] == 0
+    @staticmethod
+    def index_diag_slope(length):
+        """Gives the index used to extract a diagonal from the board"""
+        r1_diag_slope = np.arange(length)
+        r2_diag_slope = length - 1 - r1_diag_slope
+        c_diag_slope = np.arange(length)
+        return r1_diag_slope, r2_diag_slope, c_diag_slope
 
-
-def get_next_open_row(board: np.ndarray, col: int) -> int:
-    """Finds the first row where a new piece can go.
-
-    This row must be a valid location"""
-    for r in range(ROW_COUNT):
-        if board[r, col] == 0:
-            return r
-    raise InvalidMoveError("This column is filled. Please try another.")
-
-
-def print_board(board: np.ndarray):
-    print(np.flip(board, 0))
-
-
-def winning_move(board: np.ndarray, player_id: int):
-    """Check if `player` is winning."""
-    r1_diag_slope = np.arange(NB_IN_A_ROW)
-    r2_diag_slope = NB_IN_A_ROW - 1 - r1_diag_slope
-    c_diag_slope = np.arange(NB_IN_A_ROW)
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            # Check horizontal locations for win
-            if c <= COLUMN_COUNT - NB_IN_A_ROW \
-                    and (board[r, c: c+NB_IN_A_ROW] == player_id).all():
-                return True
-
-            # Check vertical locations for win
-            if r <= ROW_COUNT - NB_IN_A_ROW \
-                    and (board[r: r + NB_IN_A_ROW, c] == player_id).all():
-                return True
-
-            # check diagonals :
-            if c <= COLUMN_COUNT - NB_IN_A_ROW and r <= ROW_COUNT - NB_IN_A_ROW:
-                # Check positively sloped diagonals
-                if (board[r+r1_diag_slope, c+c_diag_slope] == player_id).all():
+    def winning_move(self, player_id: int, nb_in_a_row: int = 4):
+        """Check if `player` is winning."""
+        r1_diag, r2_diag, c_diag = self.index_diag_slope(nb_in_a_row)
+        for c in range(self.nb_cols):
+            for r in range(self.nb_rows):
+                # Check horizontal locations for win
+                if c <= self.nb_cols - nb_in_a_row \
+                        and (self.board[r, c: c + nb_in_a_row]
+                             == player_id).all():
                     return True
 
-                # Check negatively sloped diagonals
-                if (board[r+r2_diag_slope, c+c_diag_slope] == player_id).all():
+                # Check vertical locations for win
+                if r <= self.nb_rows - nb_in_a_row \
+                        and (self.board[r: r + nb_in_a_row, c]
+                             == player_id).all():
                     return True
+
+                # check diagonals :
+                if c <= self.nb_cols - nb_in_a_row \
+                        and r <= self.nb_rows - nb_in_a_row:
+                    # Check positively sloped diagonals
+                    if (self.board[
+                            r + r1_diag, c + c_diag] == player_id).all():
+                        return True
+
+                    # Check negatively sloped diagonals
+                    if (self.board[
+                            r + r2_diag, c + c_diag] == player_id).all():
+                        return True
+
+
+class PygameScreen:
+    """Manages the pygame display"""
+
+    def __init__(self, width, height):
+        self._font = None
+        self.screen = self.setup_screen(width, height)
+
+    def setup_font(self, name: str = "monospace", size: int = 30):
+        self._font = pygame.font.SysFont(name, size)
+
+    @property
+    def font(self) -> pygame.font.Font:
+        if self._font is None:
+            raise NotSetUpError("Font not defined!"
+                                " See `setup_font()` to setup one.")
+        return self._font
+
+    @staticmethod
+    def setup_screen(width: int, height: int) -> pygame.Surface:
+        return pygame.display.set_mode((width, height))
+
+    def prompt_msg(self, msg: str,
+                   color, antialias=True, label=None, dest=(40, 10)) -> None:
+        """Prompts message in color to the screen"""
+        if label is None:
+            label = self.font.render(msg, antialias, color)
+        self.screen.blit(label, dest)
+        pygame.display.update()
+
+
+class DisplayManager:
+    """Manager of the pygame display"""
+
+    def __init__(self, nb_rows, nb_cols, square_size):
+        width = nb_cols * square_size
+        height = (nb_rows + 1) * square_size
+        self.size = (width, height)
+        self.square_size = square_size
+        self.radius = square_size // 2 - square_size // 20
+        self.screen = PygameScreen(width, height)
+
+    @staticmethod
+    def init_pygame():
+        nb_pass, nb_fail = pygame.init()
+        print(f"Pygame init done,"
+              f" {nb_pass} module(s) passed, {nb_fail} failed.")
 
 
 def draw_board(board: np.ndarray, screen):
@@ -112,34 +165,31 @@ def draw_board(board: np.ndarray, screen):
             pygame.draw.circle(
                 screen, BLACK,
                 (c * SQUARE_SIZE + SQUARE_SIZE / 2,
-                 r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2), RADIUS)
-
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            player_ = board[r, c]
+                 (r + 1) * SQUARE_SIZE + SQUARE_SIZE / 2), RADIUS)
+            player_ = board[ROW_COUNT-1-r, c]
             if player_ > 0:
                 col_player = COL_PLAYERS[player_]
                 pygame.draw.circle(
                     screen, col_player,
                     (c * SQUARE_SIZE + SQUARE_SIZE // 2,
-                     (ROW_COUNT - r) * SQUARE_SIZE + SQUARE_SIZE // 2), RADIUS)
+                     (r + 1) * SQUARE_SIZE + SQUARE_SIZE // 2), RADIUS)
     pygame.display.update()
 
 
 def main():
-    board = create_board()
-    print_board(board)
-    turn = 1
+    grid = Grid(ROW_COUNT, COLUMN_COUNT)
+    # print_board(board)
+    current_player_id = 1
 
-    init_pygame()
-    my_font = setup_font()
+    DisplayManager.init_pygame()
 
     width = COLUMN_COUNT * SQUARE_SIZE
-    height = (ROW_COUNT + 1) * SQUARE_SIZE
 
-    screen = setup_screen(width, height)
-    draw_board(board, screen)
-    pygame.display.update()
+    pygame_manager = DisplayManager(ROW_COUNT, COLUMN_COUNT, SQUARE_SIZE)
+    window = pygame_manager.screen
+    window.setup_font(NAME_FONT, SIZE_FONT)
+
+    draw_board(grid.board, window.screen)
 
     game_over = False
     while not game_over:
@@ -149,36 +199,37 @@ def main():
                 sys.exit()
 
             if event.type == pygame.MOUSEMOTION:
-                pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARE_SIZE))
+                pygame.draw.rect(window.screen, BLACK,
+                                 (0, 0, width, SQUARE_SIZE))
                 posx = event.pos[0]
-                pygame.draw.circle(screen, COL_PLAYERS[turn],
+                pygame.draw.circle(window.screen,
+                                   COL_PLAYERS[current_player_id],
                                    (posx, int(SQUARE_SIZE / 2)), RADIUS)
             pygame.display.update()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                pygame.draw.rect(screen, BLACK, (0, 0, width, SQUARE_SIZE))
+                pygame.draw.rect(window.screen, BLACK,
+                                 (0, 0, width, SQUARE_SIZE))
                 # print(event.pos)
                 # Ask for Player $turn Input
 
                 posx = event.pos[0]
                 col = int(math.floor(posx / SQUARE_SIZE))
 
-                if not is_valid_location(board, col):
+                if not grid.is_valid_location(col):
                     break
 
-                drop_piece(board, col, turn)
+                grid.drop_piece(col, current_player_id)
+                # print_board(board)
+                draw_board(grid.board, window.screen)
 
-                if winning_move(board, turn):
-                    label = my_font.render(f"Player {turn} wins!!",
-                                           True, COL_PLAYERS[turn])
-                    screen.blit(label, (40, 10))
+                if grid.winning_move(current_player_id, NB_IN_A_ROW):
+                    window.prompt_msg(f"Player {current_player_id} wins!!",
+                                      COL_PLAYERS[current_player_id])
                     game_over = True
 
-                print_board(board)
-                draw_board(board, screen)
-
-                turn %= NB_PLAYERS
-                turn += 1
+                current_player_id %= NB_PLAYERS
+                current_player_id += 1
 
         if game_over:
             pygame.time.wait(3000)
