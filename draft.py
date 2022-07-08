@@ -20,7 +20,13 @@ NB_IN_A_ROW = 4
 COL_PLAYERS = [BLACK, RED, YELLOW]
 
 SQUARE_SIZE = 100
-RADIUS = int(SQUARE_SIZE / 2 - 5)
+RADIUS = SQUARE_SIZE // 2 - 5
+
+NB_PLAYERS = 2
+
+
+class InvalidMoveError(Exception):
+    """Custom error for invalid moves."""
 
 
 def init_pygame():
@@ -33,18 +39,25 @@ def create_board():
     return board
 
 
-def drop_piece(board, row, col, piece):
+def drop_piece(board, col, piece):
+    """Drop the piece in the column."""
+    row = get_next_open_row(board, col)
     board[row, col] = piece
 
 
 def is_valid_location(board, col):
+    """Checks if a column is a valid location for a piece."""
     return board[ROW_COUNT - 1, col] == 0
 
 
 def get_next_open_row(board, col):
+    """Finds the first row where a new piece can go.
+
+    This row must be a valid location"""
     for r in range(ROW_COUNT):
         if board[r, col] == 0:
             return r
+    raise InvalidMoveError("This column is filled. Please try another.")
 
 
 def print_board(board):
@@ -52,18 +65,20 @@ def print_board(board):
 
 
 def winning_move(board, player_id):
-    """Check if `player` is winning"""
+    """Check if `player` is winning."""
     r1_diag_slope = np.arange(NB_IN_A_ROW)
     r2_diag_slope = NB_IN_A_ROW - 1 - r1_diag_slope
     c_diag_slope = np.arange(NB_IN_A_ROW)
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
             # Check horizontal locations for win
-            if c <= COLUMN_COUNT - NB_IN_A_ROW and (board[r, c: c+NB_IN_A_ROW] == player_id).all():
+            if c <= COLUMN_COUNT - NB_IN_A_ROW \
+                    and (board[r, c: c+NB_IN_A_ROW] == player_id).all():
                 return True
 
             # Check vertical locations for win
-            if r <= ROW_COUNT - NB_IN_A_ROW and (board[r: r + 4, c] == player_id).all():
+            if r <= ROW_COUNT - NB_IN_A_ROW \
+                    and (board[r: r + NB_IN_A_ROW, c] == player_id).all():
                 return True
 
             # check diagonals :
@@ -81,19 +96,22 @@ def draw_board(board, screen, height):
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
             pygame.draw.rect(screen, BLUE,
-                             (c * SQUARE_SIZE, r * SQUARE_SIZE + SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
-            pygame.draw.circle(screen, BLACK, (c * SQUARE_SIZE + SQUARE_SIZE / 2,
-                                               r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2),
-                               RADIUS)
+                             (c * SQUARE_SIZE, r * SQUARE_SIZE + SQUARE_SIZE,
+                              SQUARE_SIZE, SQUARE_SIZE))
+            pygame.draw.circle(
+                screen, BLACK,
+                (c * SQUARE_SIZE + SQUARE_SIZE / 2,
+                 r * SQUARE_SIZE + SQUARE_SIZE + SQUARE_SIZE / 2), RADIUS)
 
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
             player_ = board[r, c]
             if player_ > 0:
                 col_player = COL_PLAYERS[player_]
-                pygame.draw.circle(screen, col_player,
-                                   (c * SQUARE_SIZE + SQUARE_SIZE // 2,
-                                    height - int(r * SQUARE_SIZE + SQUARE_SIZE // 2)), RADIUS)
+                pygame.draw.circle(
+                    screen, col_player,
+                    (c * SQUARE_SIZE + SQUARE_SIZE // 2,
+                     height - int(r * SQUARE_SIZE + SQUARE_SIZE // 2)), RADIUS)
     pygame.display.update()
 
 
