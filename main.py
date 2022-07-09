@@ -1,7 +1,4 @@
-from tkinter import *
-from SuperMatrix import *
-
-
+"""
 ###########################################
 #  Power Four                             #
 #  coded by Maximin Duvillard             #
@@ -12,6 +9,10 @@ from SuperMatrix import *
 #          Two Players                    #
 #                                         #
 ###########################################
+"""
+import tkinter
+from tkinter import Frame, Canvas, Toplevel, Scale, Message
+from super_matrix import SuperMatrix
 
 
 # Todo : possibilities of variations :
@@ -26,11 +27,11 @@ class MenuBar(Frame):
     """bar of menu rolling"""
 
     def __init__(self, boss=None):
-        Frame.__init__(self, borderwidth=2, relief=GROOVE)
+        Frame.__init__(self, borderwidth=2, relief=tkinter.GROOVE)
         # #### Menu <File> #####
-        file_menu = Menubutton(self, text='File')
-        file_menu.pack(side=LEFT, padx=5)
-        me1 = Menu(file_menu)
+        file_menu = tkinter.Menubutton(self, text='File')
+        file_menu.pack(side=tkinter.LEFT, padx=5)
+        me1 = tkinter.Menu(file_menu)
         me1.add_command(label='Options', underline=0,
                         command=boss.options)
         me1.add_command(label='Undo', underline=0,
@@ -44,9 +45,9 @@ class MenuBar(Frame):
         file_menu.configure(menu=me1)
 
         # #### Menu <Help> #####
-        help_menu = Menubutton(self, text='Help')
-        help_menu.pack(side=LEFT, padx=5)
-        me2 = Menu(help_menu)
+        help_menu = tkinter.Menubutton(self, text='Help')
+        help_menu.pack(side=tkinter.LEFT, padx=5)
+        me2 = tkinter.Menu(help_menu)
         me2.add_command(label='Principe of the game', underline=0,
                         command=boss.principe)
         me2.add_command(label='By the way ...', underline=0,
@@ -73,21 +74,25 @@ class Panel(Frame):
                           highlightthickness=1, highlightbackground="white")
         # Link of the event <click of the mouse> with its manager :
         self.can.bind("<Button-1>", self.click)
-        self.can.pack(side=LEFT)
+        self.can.pack(side=tkinter.LEFT)
         self.can_bis = Canvas(self, bg="white", borderwidth=0,
                               highlightthickness=1, highlightbackground="white")
-        self.turn = self.can_bis.create_text(self.can_bis.winfo_width() / 2, self.can_bis.winfo_height() / 3,
-                                             text="Yellow's\n turn", font="Helvetica 18 bold")
+        self.turn = self.can_bis.create_text(self.can_bis.winfo_width() / 2,
+                                             self.can_bis.winfo_height() / 3,
+                                             text="Yellow's\n turn",
+                                             font="Helvetica 18 bold")
         x1 = self.can_bis.winfo_width() / 3
         y = self.can_bis.winfo_height() * 2 / 3
         y1 = y - x1
         x2 = x1 * 2
         y2 = y + x1
-        self.turn_bis = self.can_bis.create_oval(x1, y1, x2, y2, outline="grey", width=1, fill="yellow")
+        self.turn_bis = self.can_bis.create_oval(x1, y1, x2, y2, outline="grey",
+                                                 width=1, fill="yellow")
         # self.can_bis = Label(text="Red's\n turn")
-        self.can_bis.pack(side=RIGHT)
+        self.can_bis.pack(side=tkinter.RIGHT)
         self.player = 1  # TODO = to change color of first player.
-        self.state = SuperMatrix(2, self.n_lig, self.n_col)  # construction of a list of lists
+        # construction of a list of lists
+        self.state = SuperMatrix(2, self.n_lig, self.n_col)
         self.game = []
         self.history = []
         self.coup = 0
@@ -100,7 +105,9 @@ class Panel(Frame):
         """Initialisation of the list which remember the state of the game"""
         self.win = False
         if state is None:
-            # self.player = 1 # TODO : here to force first player color ? (be careful with A.I. definition
+            # TODO : here to force first player color ?
+            #  (be careful with A.I. definition)
+            # self.player = 1
             self.state = SuperMatrix(2, self.n_lig, self.n_col)
             self.game.append(self.state)
         else:
@@ -113,8 +120,8 @@ class Panel(Frame):
         # the properties which are linked to the event of reconfiguration
         # contain all the new sizes of the panel :
         self.width, self.height = event.width - 4, event.height - 4
-        # The subtract of 4 pixels allowed to compensate the width
-        # of the 'highlightbordure" rolling the canvas)
+        # The subtraction of 4 pixels allows to compensate the width
+        # of the 'highlightbordure' rolling the canvas)
         self.trace_grille()
 
     def trace_grille(self):
@@ -128,8 +135,9 @@ class Panel(Frame):
         wide, high = self.cote * self.n_col, self.cote * self.n_lig
         self.can.configure(width=wide, height=high)
         # Layout of the grid:
-        self.can.delete(ALL)  # erasing of the past Layouts
-        # Layout of all the pawns, white or black according to the sate of the game :
+        self.can.delete(tkinter.ALL)  # erasing of the past Layouts
+        # Layout of all the pawns,
+        # white or black according to the state of the game :
         for l in range(self.n_lig):
             for c in range(self.n_col):
                 x1 = c * self.cote + 3  # size of pawns =
@@ -141,9 +149,12 @@ class Panel(Frame):
                                      width=1, fill=color)
         self.can_bis.configure(width=self.width - wide, height=self.height)
         self.can_bis.delete(self.turn, self.turn_bis)
-        self.turn = self.can_bis.create_text(self.can_bis.winfo_width() / 2, self.can_bis.winfo_height() / 3,
-                                             text=["Red", "Yellow"][self.player] + "'s\n turn",
-                                             font="Helvetica 18 bold")
+        self.turn = \
+            self.can_bis.create_text(self.can_bis.winfo_width() / 2,
+                                     self.can_bis.winfo_height() / 3,
+                                     text=f"{['Red', 'Yellow'][self.player]}'s"
+                                          f"\n turn",
+                                     font="Helvetica 18 bold")
         x = self.can_bis.winfo_width() / 3
         y = self.can_bis.winfo_height() / 3
         r = min([x, y, 40])
@@ -151,8 +162,9 @@ class Panel(Frame):
         x1 = 3 * x / 2 - r
         x2 = 3 * x / 2 + r
         y2 = y * 2 + r
-        self.turn_bis = self.can_bis.create_oval(x1, y1, x2, y2, outline="grey",
-                                                 width=1, fill=["red", "yellow"][self.player])
+        self.turn_bis\
+            = self.can_bis.create_oval(x1, y1, x2, y2, outline="grey", width=1,
+                                       fill=["red", "yellow"][self.player])
 
     def click(self, event):
         """Management of the mouse click : return the pawns"""
@@ -173,8 +185,8 @@ class Panel(Frame):
                 y1 = n * self.cote + 3
                 y2 = (n + 1) * self.cote - 3
                 color = ["red", "yellow"][self.player]
-                self.can.create_oval(x1, y1 - self.cote, x2, y2 - self.cote, outline="grey",
-                                     width=1, fill="white")
+                self.can.create_oval(x1, y1 - self.cote, x2, y2 - self.cote,
+                                     outline="grey", width=1, fill="white")
                 self.update()
                 self.can.create_oval(x1, y1, x2, y2, outline="grey",
                                      width=1, fill=color)
@@ -194,16 +206,22 @@ class Panel(Frame):
                     self.player += 1
                     self.player %= 2
                     # self.can_bis.destroy()
-                    # self.can_bis = Label(text=["Red", "Yellow"][self.player]+"'s\n turn", font="Helvetica 15 bold")
-                    self.can_bis.itemconfig(self.turn, text=["Red", "Yellow"][self.player] + "'s\n turn")
-                    self.can_bis.itemconfig(self.turn_bis, fill=["red", "yellow"][self.player])
+                    # self.can_bis = Label(text=["Red", "Yellow"][self.player]+\
+                    # "'s\n turn", font="Helvetica 15 bold")
+                    self.can_bis.itemconfig(
+                        self.turn,
+                        text=f"{['Red', 'Yellow'][self.player]}'s\n turn")
+                    self.can_bis.itemconfig(
+                        self.turn_bis, fill=["red", "yellow"][self.player])
 
                     # print("hello")
-                    self.can_bis.pack(side=RIGHT)
+                    self.can_bis.pack(side=tkinter.RIGHT)
                     self.can_bis.update()
                     self.trace_grille()
                 else:
-                    self.can_bis.itemconfig(self.turn, text=["Red", "Yellow"][self.player] + "\nwins !!")
+                    self.can_bis.itemconfig(
+                        self.turn,
+                        text=f"{['Red', 'Yellow'][self.player]}\n wins !!")
                     self.can_bis.delete(self.turn_bis)
                     try:
                         self.game[self.coup] = self.state.copy()
@@ -225,7 +243,7 @@ class Panel(Frame):
                     x2, y2 = x, y
                     victory = True
                     alignment = [[x, y]]
-                    for n in range(3):
+                    for _ in range(3):
                         x2 += sens[0]
                         y2 += sens[1]
                         alignment.append([x2, y2])
@@ -263,10 +281,10 @@ class Ping(Frame):
         self.master.title(" Game of power four - Two Player")
 
         self.m_bar = MenuBar(self)
-        self.m_bar.pack(side=TOP, expand=NO, fill=X)
+        self.m_bar.pack(side=tkinter.TOP, expand=tkinter.NO, fill=tkinter.X)
 
         self.jeu = Panel()
-        self.jeu.pack(expand=YES, fill=BOTH, padx=8, pady=8)
+        self.jeu.pack(expand=tkinter.YES, fill=tkinter.BOTH, padx=8, pady=8)
         self.pack()
 
         root.bind("<Command-z>", self.undo)
@@ -277,12 +295,12 @@ class Ping(Frame):
         """Choice of the number of lines and columns for the grid"""
         opt = Toplevel(self)
         cur_l = Scale(opt, length=200, label="Number of lines :",
-                      orient=HORIZONTAL,
+                      orient=tkinter.HORIZONTAL,
                       from_=1, to=12, command=self.maj_lines)
         cur_l.set(self.jeu.n_lig)  # initial position of the cursor
         cur_l.pack()
         cur_h = Scale(opt, length=200, label="Number of columns :",
-                      orient=HORIZONTAL,
+                      orient=tkinter.HORIZONTAL,
                       from_=1, to=12, command=self.maj_columns)
         cur_h.set(self.jeu.n_col)
         cur_h.pack()
@@ -326,7 +344,8 @@ class Ping(Frame):
     #     self.jeu.trace_grille()
 
     def principe(self):
-        """window-message containing the small description of the principe of this game"""
+        """window-message containing
+         the small description of the principe of this game"""
         msg = Toplevel(self)
         Message(msg, bg="navy", fg="ivory", width=400,
                 font="Helvetica 10 bold",
@@ -337,12 +356,12 @@ class Ping(Frame):
     def by_the_way(self):
         """window-message indicating the author and the type of licence"""
         msg = Toplevel(self)
-        Message(msg, width=200, aspect=100, justify=CENTER,
+        Message(msg, width=200, aspect=100, justify=tkinter.CENTER,
                 text="Jeu de Power_Four\n\n by M.Duvillard.\n"
                      "Licence = ???").pack(padx=10, pady=10)
 
 
 if __name__ == '__main__':
-    game = Tk()
+    game = tkinter.Tk()
     Pg = Ping(game)
     Pg.mainloop()
