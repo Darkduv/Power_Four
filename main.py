@@ -66,7 +66,7 @@ class Panel(Frame):
         # cases (squared) of the grid, et the dimensions of the
         # canvas are adapted in consequence.
         Frame.__init__(self)
-        self.n_lig, self.n_col = 6, 7  # initial grid = 6*7
+        self.n_row, self.n_col = 6, 7  # initial grid = 6*7
         # Link of the event <resize> with an adapted manager :
         self.bind("<Configure>", self.rescale)
         # Canvas :
@@ -92,7 +92,7 @@ class Panel(Frame):
         self.can_bis.pack(side=tkinter.RIGHT)
         self.player = 1  # TODO = to change color of first player.
         # construction of a list of lists
-        self.state = SuperMatrix(2, self.n_lig, self.n_col)
+        self.state = SuperMatrix(2, self.n_row, self.n_col)
         self.game = []
         self.history = []
         self.coup = 0
@@ -108,7 +108,7 @@ class Panel(Frame):
             # TODO : here to force first player color ?
             #  (be careful with A.I. definition)
             # self.player = 1
-            self.state = SuperMatrix(2, self.n_lig, self.n_col)
+            self.state = SuperMatrix(2, self.n_row, self.n_col)
             self.game.append(self.state)
         else:
             self.state = state.copy()
@@ -128,17 +128,17 @@ class Panel(Frame):
         """Layout of the grid, in function of dimensions and options"""
         # maximal width and height possibles for the cases :
         l_max = self.width / self.n_col
-        h_max = self.height / self.n_lig
+        h_max = self.height / self.n_row
         # the side of a case would be the smallest of the two dimensions :
         self.cote = min(l_max, h_max)
         # -> establishment of new dimensions for the canvas :
-        wide, high = self.cote * self.n_col, self.cote * self.n_lig
+        wide, high = self.cote * self.n_col, self.cote * self.n_row
         self.can.configure(width=wide, height=high)
         # Layout of the grid:
         self.can.delete(tkinter.ALL)  # erasing of the past Layouts
         # Layout of all the pawns,
         # white or black according to the state of the game :
-        for l in range(self.n_lig):
+        for l in range(self.n_row):
             for c in range(self.n_col):
                 x1 = c * self.cote + 3  # size of pawns =
                 x2 = (c + 1) * self.cote - 3  # size of the case -6
@@ -169,19 +169,19 @@ class Panel(Frame):
     def click(self, event):
         """Management of the mouse click : return the pawns"""
         # We start to determinate the line and the columns :
-        lig, col = int(event.y / self.cote), int(event.x / self.cote)
-        if 0 <= lig < self.n_lig and 0 <= col < self.n_col:
+        row, col = int(event.y / self.cote), int(event.x / self.cote)
+        if 0 <= row < self.n_row and 0 <= col < self.n_col:
             # maximal width and height possibles for the cases :
             l_max = self.width / self.n_col
-            h_max = self.height / self.n_lig
+            h_max = self.height / self.n_row
             # the side of a case would be the smallest of the two dimensions :
             self.cote = min(l_max, h_max)
-            wide, high = self.cote * self.n_col, self.cote * self.n_lig
+            wide, high = self.cote * self.n_col, self.cote * self.n_row
             self.can.configure(width=wide, height=high)
             n = 0
             x1 = self.cote * col + 3
             x2 = self.cote * (col + 1) - 3
-            while n < self.n_lig and self.state[n][col] == 2:
+            while n < self.n_row and self.state[n][col] == 2:
                 y1 = n * self.cote + 3
                 y2 = (n + 1) * self.cote - 3
                 color = ["red", "yellow"][self.player]
@@ -194,7 +194,7 @@ class Panel(Frame):
                 self.can.after(100)
                 n += 1
 
-            if 1 <= n <= self.n_lig:
+            if 1 <= n <= self.n_row:
                 self.state[n - 1][col] = self.player
                 self.history.append([n-1, col, self.player])
                 self.coup += 1
@@ -235,7 +235,7 @@ class Panel(Frame):
         orientation = [[0, 1], [1, 0], [1, 1], [-1, 1]]
         color = self.player
         all_alignments = []
-        for x in range(self.n_lig):
+        for x in range(self.n_row):
             for y in range(self.n_col):
                 if self.state[x][y] != color:
                     continue
@@ -296,26 +296,23 @@ class Ping(Frame):
         opt = Toplevel(self)
         cur_l = Scale(opt, length=200, label="Number of lines :",
                       orient=tkinter.HORIZONTAL,
-                      from_=1, to=12, command=self.maj_lines)
-        cur_l.set(self.jeu.n_lig)  # initial position of the cursor
+                      from_=1, to=12, command=self.update_nb_cols)
+        cur_l.set(self.jeu.n_row)  # initial position of the cursor
         cur_l.pack()
         cur_h = Scale(opt, length=200, label="Number of columns :",
                       orient=tkinter.HORIZONTAL,
-                      from_=1, to=12, command=self.maj_columns)
+                      from_=1, to=12, command=self.update_nb_cols)
         cur_h.set(self.jeu.n_col)
         cur_h.pack()
 
-    def maj_columns(self, n):
-        """maj_columns
-        :param n: int number of columns
-        :type self: Ping
-        """
+    def update_nb_cols(self, n):
+        """Updates the number of columns."""
         self.jeu.n_col = int(n)
         self.jeu.init_jeu()
 
-    def maj_lines(self, n):
-        """for giving a major of n"""
-        self.jeu.n_lig = int(n)
+    def update_nb_rows(self, n):
+        """Updates the number of rows."""
+        self.jeu.n_row = int(n)
         self.jeu.init_jeu()
 
     def reset(self, event=None):
@@ -339,7 +336,7 @@ class Ping(Frame):
     #     if self.jeu.coup < len(self.jeu.game):
     #         self.jeu.coup += 1
     #         game = self.jeu.game[self.jeu.coup]
-    #         self.jeu.init_jeu()
+    #         self.jeu.init_state()
     #         self.jeu.state = game.copy()
     #     self.jeu.trace_grille()
 
