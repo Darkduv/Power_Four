@@ -7,6 +7,9 @@ import pygame
 import sys
 import math
 
+from typing import Tuple
+
+
 BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
@@ -17,7 +20,9 @@ COLUMN_COUNT = 7
 
 NB_IN_A_ROW = 4
 
-COL_PLAYERS = [BLACK, RED, YELLOW]
+COLOR_PLAYERS = [BLACK, RED, YELLOW]
+GRID_COLOR = BLUE
+BACKGROUND_COLOR = BLACK
 
 SQUARE_SIZE = 100
 RADIUS = SQUARE_SIZE // 2 - 5
@@ -115,7 +120,7 @@ class PygameScreen:
         self._font = None
         self.screen = self.setup_screen(width, height)
 
-    def setup_font(self, name: str = "monospace", size: int = 30):
+    def setup_font(self, name, size):
         self._font = pygame.font.SysFont(name, size)
 
     @property
@@ -130,10 +135,9 @@ class PygameScreen:
         return pygame.display.set_mode((width, height))
 
     def prompt_msg(self, msg: str,
-                   color, antialias=True, label=None, dest=(40, 10)) -> None:
+                   color, antialias=True, dest=(40, 10)) -> None:
         """Prompts message in color to the screen"""
-        if label is None:
-            label = self.font.render(msg, antialias, color)
+        label = self.font.render(msg, antialias, color)
         self.screen.blit(label, dest)
         pygame.display.update()
 
@@ -141,13 +145,19 @@ class PygameScreen:
 class DisplayManager:
     """Manager of the pygame display"""
 
+    _colors = [BLACK, RED, YELLOW]
+
     def __init__(self, nb_rows, nb_cols, square_size):
         width = nb_cols * square_size
         height = (nb_rows + 1) * square_size
         self.size = (width, height)
         self.square_size = square_size
+        self.nb_rows = nb_rows
+        self.nb_cols = nb_cols
         self.radius = square_size // 2 - square_size // 20
         self.screen = PygameScreen(width, height)
+        self.grid_color = GRID_COLOR
+        self.background_color = BACKGROUND_COLOR
 
     @staticmethod
     def init_pygame():
@@ -155,41 +165,104 @@ class DisplayManager:
         print(f"Pygame init done,"
               f" {nb_pass} module(s) passed, {nb_fail} failed.")
 
+    def draw_row_col_square(self, row: int, col: int, color):
+        pygame.draw.rect(self.screen.screen, color,
+                         (col * self.square_size, row * self.square_size,
+                          self.square_size, self.square_size))
 
-def draw_board(board: np.ndarray, screen):
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            pygame.draw.rect(screen, BLUE,
-                             (c * SQUARE_SIZE, r * SQUARE_SIZE + SQUARE_SIZE,
-                              SQUARE_SIZE, SQUARE_SIZE))
-            pygame.draw.circle(
-                screen, BLACK,
-                (c * SQUARE_SIZE + SQUARE_SIZE / 2,
-                 (r + 1) * SQUARE_SIZE + SQUARE_SIZE / 2), RADIUS)
-            player_ = board[ROW_COUNT-1-r, c]
-            if player_ > 0:
-                col_player = COL_PLAYERS[player_]
-                pygame.draw.circle(
-                    screen, col_player,
-                    (c * SQUARE_SIZE + SQUARE_SIZE // 2,
-                     (r + 1) * SQUARE_SIZE + SQUARE_SIZE // 2), RADIUS)
-    pygame.display.update()
+    def draw_row_col_circle(self, row: int, col: int, color_id: int):
+        pygame.draw.circle(self.screen.screen, self._colors[color_id],
+                           (col * self.square_size + self.square_size // 2,
+                            row * self.square_size + self.square_size // 2),
+                           self.radius)
+
+    def draw_waiting_circle(self, pos_x=None, color_id: int = None):
+        pygame.draw.rect(self.screen.screen, self.background_color,
+                         (0, 0, self.size[0], self.square_size))
+        if pos_x is None or color_id is None:
+            return
+        pygame.draw.circle(self.screen.screen, self._colors[color_id],
+                           (pos_x, self.square_size // 2), RADIUS)
+        pygame.display.update()
+
+    def draw_grid(self, board: np.ndarray):
+        for r, l_row in enumerate(board):
+            for c, id_player in enumerate(l_row):
+                self.draw_row_col_square(self.nb_rows-r, c, self.grid_color)
+                self.draw_row_col_circle(self.nb_rows-r, c, id_player)
+        pygame.display.update()
+
+    def prompt_msg(self, msg: str,
+                   color_id, antialias=True, dest=(40, 10)) -> None:
+        """Prompts message in color to the screen"""
+        self.screen.prompt_msg(msg, self._colors[color_id], antialias, dest)
+
+    def setup_font(self, name: str = "monospace", size: int = 30):
+        self.screen.setup_font(name, size)
+
+    def color_from_id(self, id_color: int):
+        return self._colors[id_color]
+
+
+class MainGame:
+
+    def __init__(self, nb_rows, nb_cols, nb_in_a_row,
+                 square_size, name_font="monospace", size_font=30):
+        # init grid
+        self.nb_rows = nb_rows
+        self.nb_cols = nb_cols
+        self.grid = Grid(nb_rows, nb_cols)
+
+        # init pygame window
+        DisplayManager.init_pygame()
+        self.display_manager = DisplayManager(nb_rows, nb_cols, square_size)
+        self.display_manager.setup_font(name_font, size_font)
+
+        # init game
+        self.nb_in_a_row = nb_in_a_row
+        self.current_player_id = 1
+
+    def draw_grid(self):
+        self.display_manager.draw_grid(self.grid.board)
+
+    def mouse_motion(self, event: pygame.event.Event):
+        pos_x = event.pos[0]
+        self.display_manager.draw_waiting_circle(pos_x, self.current_player_id)
+
+    def get_col_from_mouse(self, event: pygame.event.Event) -> int:
+        pos_x = event.pos[0]
+        col = int(math.floor(pos_x / self.display_manager.square_size))
+        return col
+
+    def mouse_down(self, event: pygame.event.Event) -> Tuple[bool, bool]:
+        col = self.get_col_from_mouse(event)
+
+        if not self.grid.is_valid_location(col):
+            return False, False
+            # raise InvalidMoveError("Invalid column.")
+
+        self.display_manager.draw_waiting_circle()
+        self.grid.drop_piece(col, self.current_player_id)
+        # print_board(board)
+        self.draw_grid()
+
+        game_over = self.grid.winning_move(self.current_player_id,
+                                           self.nb_in_a_row)
+        return True, game_over
+
+    def next_player(self):
+        self.current_player_id %= NB_PLAYERS
+        self.current_player_id += 1
+
+    def win(self):
+        self.display_manager.prompt_msg(
+            f"Player {self.current_player_id} wins!!", self.current_player_id)
 
 
 def main():
-    grid = Grid(ROW_COUNT, COLUMN_COUNT)
-    # print_board(board)
-    current_player_id = 1
-
-    DisplayManager.init_pygame()
-
-    width = COLUMN_COUNT * SQUARE_SIZE
-
-    pygame_manager = DisplayManager(ROW_COUNT, COLUMN_COUNT, SQUARE_SIZE)
-    window = pygame_manager.screen
-    window.setup_font(NAME_FONT, SIZE_FONT)
-
-    draw_board(grid.board, window.screen)
+    game = MainGame(ROW_COUNT, COLUMN_COUNT, NB_IN_A_ROW,
+                    SQUARE_SIZE, NAME_FONT, SIZE_FONT)
+    game.draw_grid()
 
     game_over = False
     while not game_over:
@@ -199,39 +272,17 @@ def main():
                 sys.exit()
 
             if event.type == pygame.MOUSEMOTION:
-                pygame.draw.rect(window.screen, BLACK,
-                                 (0, 0, width, SQUARE_SIZE))
-                posx = event.pos[0]
-                pygame.draw.circle(window.screen,
-                                   COL_PLAYERS[current_player_id],
-                                   (posx, int(SQUARE_SIZE / 2)), RADIUS)
-            pygame.display.update()
+                game.mouse_motion(event)
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                pygame.draw.rect(window.screen, BLACK,
-                                 (0, 0, width, SQUARE_SIZE))
-                # print(event.pos)
                 # Ask for Player $turn Input
-
-                posx = event.pos[0]
-                col = int(math.floor(posx / SQUARE_SIZE))
-
-                if not grid.is_valid_location(col):
+                valid, game_over = game.mouse_down(event)
+                if not valid or game_over:
                     break
-
-                grid.drop_piece(col, current_player_id)
-                # print_board(board)
-                draw_board(grid.board, window.screen)
-
-                if grid.winning_move(current_player_id, NB_IN_A_ROW):
-                    window.prompt_msg(f"Player {current_player_id} wins!!",
-                                      COL_PLAYERS[current_player_id])
-                    game_over = True
-
-                current_player_id %= NB_PLAYERS
-                current_player_id += 1
+                game.next_player()
 
         if game_over:
+            game.win()
             pygame.time.wait(3000)
 
 
