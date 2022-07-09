@@ -8,6 +8,7 @@ import sys
 import math
 
 from typing import Tuple
+from collections import namedtuple
 
 
 BLUE = (0, 0, 255)
@@ -20,9 +21,15 @@ COLUMN_COUNT = 7
 
 NB_IN_A_ROW = 4
 
-COLOR_PLAYERS = [BLACK, RED, YELLOW]
-GRID_COLOR = BLUE
-BACKGROUND_COLOR = BLACK
+
+ColorSettings = namedtuple("ColorSettings", ["players_colors",
+                                             "grid_color",
+                                             "background_color"])
+
+COLOR_SETTINGS = ColorSettings(players_colors=[BLACK, RED, YELLOW],
+                               grid_color=BLUE,
+                               background_color=BLACK)
+
 
 SQUARE_SIZE = 100
 RADIUS = SQUARE_SIZE // 2 - 5
@@ -145,9 +152,8 @@ class PygameScreen:
 class DisplayManager:
     """Manager of the pygame display"""
 
-    _colors = [BLACK, RED, YELLOW]
-
-    def __init__(self, nb_rows, nb_cols, square_size):
+    def __init__(self, nb_rows, nb_cols,
+                 square_size, color_settings: ColorSettings):
         width = nb_cols * square_size
         height = (nb_rows + 1) * square_size
         self.size = (width, height)
@@ -156,8 +162,7 @@ class DisplayManager:
         self.nb_cols = nb_cols
         self.radius = square_size // 2 - square_size // 20
         self.screen = PygameScreen(width, height)
-        self.grid_color = GRID_COLOR
-        self.background_color = BACKGROUND_COLOR
+        self.colors = color_settings
 
     @staticmethod
     def init_pygame():
@@ -171,43 +176,47 @@ class DisplayManager:
                           self.square_size, self.square_size))
 
     def draw_row_col_circle(self, row: int, col: int, color_id: int):
-        pygame.draw.circle(self.screen.screen, self._colors[color_id],
+        pygame.draw.circle(self.screen.screen, self.color_from_id(color_id),
                            (col * self.square_size + self.square_size // 2,
                             row * self.square_size + self.square_size // 2),
                            self.radius)
 
     def draw_waiting_circle(self, pos_x=None, color_id: int = None):
-        pygame.draw.rect(self.screen.screen, self.background_color,
+        pygame.draw.rect(self.screen.screen, self.colors.background_color,
                          (0, 0, self.size[0], self.square_size))
         if pos_x is None or color_id is None:
             return
-        pygame.draw.circle(self.screen.screen, self._colors[color_id],
+        pygame.draw.circle(self.screen.screen, self.color_from_id(color_id),
                            (pos_x, self.square_size // 2), RADIUS)
         pygame.display.update()
 
     def draw_grid(self, board: np.ndarray):
         for r, l_row in enumerate(board):
             for c, id_player in enumerate(l_row):
-                self.draw_row_col_square(self.nb_rows-r, c, self.grid_color)
+                self.draw_row_col_square(self.nb_rows-r, c,
+                                         self.colors.grid_color)
                 self.draw_row_col_circle(self.nb_rows-r, c, id_player)
         pygame.display.update()
 
     def prompt_msg(self, msg: str,
                    color_id, antialias=True, dest=(40, 10)) -> None:
         """Prompts message in color to the screen"""
-        self.screen.prompt_msg(msg, self._colors[color_id], antialias, dest)
+        self.screen.prompt_msg(msg, self.color_from_id(color_id),
+                               antialias, dest)
 
     def setup_font(self, name: str = "monospace", size: int = 30):
         self.screen.setup_font(name, size)
 
     def color_from_id(self, id_color: int):
-        return self._colors[id_color]
+        return self.colors.players_colors[id_color]
 
 
 class MainGame:
+    """Main handle of the game"""
 
     def __init__(self, nb_rows, nb_cols, nb_in_a_row,
-                 square_size, name_font="monospace", size_font=30):
+                 color_settings, square_size,
+                 name_font="monospace", size_font=30):
         # init grid
         self.nb_rows = nb_rows
         self.nb_cols = nb_cols
@@ -215,7 +224,8 @@ class MainGame:
 
         # init pygame window
         DisplayManager.init_pygame()
-        self.display_manager = DisplayManager(nb_rows, nb_cols, square_size)
+        self.display_manager = DisplayManager(nb_rows, nb_cols,
+                                              square_size, color_settings)
         self.display_manager.setup_font(name_font, size_font)
 
         # init game
@@ -258,32 +268,31 @@ class MainGame:
         self.display_manager.prompt_msg(
             f"Player {self.current_player_id} wins!!", self.current_player_id)
 
+    def main_loop(self):
+        """Main loop of the game"""
+        game_over = False
+        while not game_over:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+                if event.type == pygame.MOUSEMOTION:
+                    self.mouse_motion(event)
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    # Ask for Player $turn Input
+                    valid, game_over = self.mouse_down(event)
+                    if not valid or game_over:
+                        break
+                    self.next_player()
+            if game_over:
+                self.win()
+                pygame.time.wait(3000)
+
 
 def main():
     game = MainGame(ROW_COUNT, COLUMN_COUNT, NB_IN_A_ROW,
-                    SQUARE_SIZE, NAME_FONT, SIZE_FONT)
+                    COLOR_SETTINGS, SQUARE_SIZE, NAME_FONT, SIZE_FONT)
     game.draw_grid()
-
-    game_over = False
-    while not game_over:
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                sys.exit()
-
-            if event.type == pygame.MOUSEMOTION:
-                game.mouse_motion(event)
-
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                # Ask for Player $turn Input
-                valid, game_over = game.mouse_down(event)
-                if not valid or game_over:
-                    break
-                game.next_player()
-
-        if game_over:
-            game.win()
-            pygame.time.wait(3000)
+    game.main_loop()
 
 
 if __name__ == "__main__":
