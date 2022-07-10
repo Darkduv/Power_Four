@@ -27,7 +27,7 @@ class MenuBar(Frame):
     """bar of menu rolling"""
 
     def __init__(self, boss=None):
-        Frame.__init__(self, borderwidth=2, relief=tkinter.GROOVE)
+        super().__init__(borderwidth=2, relief=tkinter.GROOVE)
         # #### Menu <File> #####
         file_menu = tkinter.Menubutton(self, text='File')
         file_menu.pack(side=tkinter.LEFT, padx=5)
@@ -65,7 +65,7 @@ class Panel(Frame):
         # grid,we calculate the tallest size possible for the
         # cases (squared) of the grid, et the dimensions of the
         # canvas are adapted in consequence.
-        Frame.__init__(self)
+        super().__init__()
         self.n_row, self.n_col = 6, 7  # initial grid = 6*7
         # Link of the event <resize> with an adapted manager :
         self.bind("<Configure>", self.rescale)
@@ -276,7 +276,7 @@ class Ping(Frame):
     """corps principal du programme"""
 
     def __init__(self, root):
-        Frame.__init__(self, root)
+        super().__init__(root)
         self.master.geometry("400x300")
         self.master.title(" Game of power four - Two Player")
 
