@@ -35,11 +35,11 @@ class MenuBar(Frame):
         me1.add_command(label='Options', underline=0,
                         command=boss.options)
         me1.add_command(label='Undo', underline=0,
-                        command=boss.undo)
+                        command=boss.jeu.undo)
         # me1.add_command(label='Redo', underline=0,
         #                 command=boss.redo)
         me1.add_command(label='Restart', underline=0,
-                        command=boss.reset)
+                        command=boss.jeu.reset)
         me1.add_command(label='Quit', underline=0,
                         command=boss.quit)
         file_menu.configure(menu=me1)
@@ -237,6 +237,23 @@ class Panel(Frame):
                     self.player += 1
                     self.player %= 2
 
+    def undo(self, event=None):
+        if self.coup > 0:
+            self.coup -= 1
+            self.player += 1
+            self.player %= 2
+            self.init_jeu(self.game[self.coup].copy())
+        if event:
+            pass
+
+    def reset(self, event=None):
+        """  french!  """
+        self.init_jeu()
+        self.coup = 0
+        self.trace_grille()
+        if event:
+            pass
+
     def victory_threaten(self):
         # Todo : threaten.... ??
         orientation = [[0, 1], [1, 0], [1, 1], [-1, 1]]
@@ -294,8 +311,8 @@ class Ping(Frame):
         self.jeu.pack(expand=tkinter.YES, fill=tkinter.BOTH, padx=8, pady=8)
         self.pack()
 
-        root.bind("<Command-z>", self.undo)
-        root.bind("<Command-r>", self.reset)
+        root.bind("<Command-z>", self.jeu.undo)
+        root.bind("<Command-r>", self.jeu.reset)
         self.pack()
 
     def options(self):
@@ -321,23 +338,6 @@ class Ping(Frame):
         """Updates the number of rows."""
         self.jeu.n_row = int(n)
         self.jeu.init_jeu()
-
-    def reset(self, event=None):
-        """  french!  """
-        self.jeu.init_jeu()
-        self.jeu.coup = 0
-        self.jeu.trace_grille()
-        if event:
-            pass
-
-    def undo(self, event=None):
-        if self.jeu.coup > 0:
-            self.jeu.coup -= 1
-            self.jeu.player += 1
-            self.jeu.player %= 2
-            self.jeu.init_jeu(self.jeu.game[self.jeu.coup].copy())
-        if event:
-            pass
 
     # def redo(self):
     #     if self.jeu.coup < len(self.jeu.game):
