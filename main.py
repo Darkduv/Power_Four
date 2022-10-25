@@ -113,7 +113,16 @@ class Panel(Frame):
         else:
             self.state = state.copy()
         self.game.append(self.state)
+        self.set_side()
         self.trace_grille()
+
+    def set_side(self):
+        """Set the side value in relation with the window size"""
+        # maximal width and height possibles for the cases :
+        l_max = self.width / self.n_col
+        h_max = self.height / self.n_row
+        # the side of a case would be the smallest of the two dimensions :
+        self.cote = min(l_max, h_max)
 
     def rescale(self, event):
         """Operations made at each rescaling"""
@@ -122,15 +131,11 @@ class Panel(Frame):
         self.width, self.height = event.width - 4, event.height - 4
         # The subtraction of 4 pixels allows to compensate the width
         # of the 'highlight bordure' rolling the canvas
+        self.set_side()
         self.trace_grille()
 
     def trace_grille(self):
         """Layout of the grid, in function of dimensions and options"""
-        # maximal width and height possibles for the cases :
-        l_max = self.width / self.n_col
-        h_max = self.height / self.n_row
-        # the side of a case would be the smallest of the two dimensions :
-        self.cote = min(l_max, h_max)
         # -> establishment of new dimensions for the canvas :
         wide, high = self.cote * self.n_col, self.cote * self.n_row
         self.can.configure(width=wide, height=high)
