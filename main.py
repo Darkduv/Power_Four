@@ -347,9 +347,9 @@ class Ping(Frame):
     #         self.jeu.state = game.copy()
     #     self.jeu.trace_grille()
 
-    def principe(self):
+    def principle(self):
         """window-message containing
-         the small description of the principe of this game"""
+         the small description of the principle of this game"""
         msg = Toplevel(self)
         Message(msg, bg="navy", fg="ivory", width=400,
                 font="Helvetica 10 bold",
@@ -357,7 +357,7 @@ class Ping(Frame):
                      "Réf : Max&Cie, 2017") \
             .pack(padx=10, pady=10)
 
-    def by_the_way(self):
+    def about(self):
         """window-message indicating the author and the type of licence"""
         msg = Toplevel(self)
         Message(msg, width=200, aspect=100, justify=tkinter.CENTER,
