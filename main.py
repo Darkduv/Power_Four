@@ -23,51 +23,46 @@ from super_matrix import SuperMatrix
 
 # Todo 1: keyboard shortcuts like cmd + U for Undo, etc...  -> Partly done
 
-class MenuBar(Frame):
-    """bar of menu rolling"""
 
-    def __init__(self, boss=None):
-        super().__init__(borderwidth=2, relief=tkinter.GROOVE)
-        # #### Menu <File> #####
-        file_menu = tkinter.Menubutton(self, text='File')
-        file_menu.pack(side=tkinter.LEFT, padx=5)
-        me1 = tkinter.Menu(file_menu)
-        me1.add_command(label='Options', underline=0,
-                        command=boss.options)
-        me1.add_command(label='Undo', underline=0,
-                        command=boss.jeu.undo)
-        # me1.add_command(label='Redo', underline=0,
-        #                 command=boss.redo)
-        me1.add_command(label='Restart', underline=0,
-                        command=boss.jeu.reset)
-        me1.add_command(label='Quit', underline=0,
-                        command=boss.quit)
-        file_menu.configure(menu=me1)
+class MenuBar(tkinter.Menu):
 
-        # #### Menu <Help> #####
-        help_menu = tkinter.Menubutton(self, text='Help')
-        help_menu.pack(side=tkinter.LEFT, padx=5)
-        me2 = tkinter.Menu(help_menu)
-        me2.add_command(label='Principe of the game', underline=0,
-                        command=boss.principe)
-        me2.add_command(label='By the way ...', underline=0,
-                        command=boss.by_the_way)
-        help_menu.configure(menu=me2)
+    def __init__(self, root=None):
+        super().__init__(root)
+        root.config(menu=self)
+
+    def config_menu(self, hierarchy, parent: tkinter.Menu = None):
+        if parent is None:
+            parent = self
+            # underline = 0
+        else:
+            # underline = None
+            pass
+
+        for option in hierarchy:
+            if option is None:
+                parent.add_separator()
+                continue
+            label, menu_command = option
+
+            if isinstance(menu_command, list):
+                menu = tkinter.Menu(parent, tearoff=0)
+                self.config_menu(menu_command, parent=menu)
+                parent.add_cascade(label=label, menu=menu)
+            else:
+                parent.add_command(label=label, command=menu_command)
 
 
 class Panel(Frame):
     """Panel de jeu (grille de n x m cases)"""
 
-    def __init__(self):
+    def __init__(self, root):
         # Red = 0 and Yellow = 1
         # The panel of game is constituted of a re-scaling grid
         # containing it-self a canvas. at each re-scaling of the
         # grid,we calculate the tallest size possible for the
         # cases (squared) of the grid, et the dimensions of the
         # canvas are adapted in consequence.
-        super().__init__()
-        self.master.geometry("400x300")
-        self.master.title(" Game of power four - Two Player")
+        super().__init__(root)
         self.n_row, self.n_col = 6, 7  # initial grid = 6*7
         # Link of the event <resize> with an adapted manager :
         self.bind("<Configure>", self.rescale)
@@ -296,24 +291,39 @@ class Panel(Frame):
             return True
 
 
-class Ping(Frame):
+class PowerFourGUI(tkinter.Tk):
     """corps principal du programme"""
 
-    def __init__(self, root):
-        super().__init__(root)
+    def __init__(self):
+        super().__init__()
         # self.master.geometry("400x300")
         # self.master.title(" Game of power four - Two Player")
 
+        self.geometry("400x300")
+        self.title(" Game of power four - Two Player")
+
+        self.jeu = Panel(self)
+
+        menu_config = [
+            ('File', [
+                ('Options', self.options),
+                ('Undo', self.jeu.undo),
+                ('Restart', self.jeu.reset),
+                ('Quit', self.quit)
+            ]),
+            ('Help', [
+                ('Principle of the game', self.principle),
+                ('About...', self.about)
+            ])
+        ]
+
         self.m_bar = MenuBar(self)
-        self.m_bar.pack(side=tkinter.TOP, expand=tkinter.NO, fill=tkinter.X)
+        self.m_bar.config_menu(menu_config)
 
-        self.jeu = Panel()
         self.jeu.pack(expand=tkinter.YES, fill=tkinter.BOTH, padx=8, pady=8)
-        self.pack()
 
-        root.bind("<Command-z>", self.jeu.undo)
-        root.bind("<Command-r>", self.jeu.reset)
-        self.pack()
+        self.bind("<Command-z>", self.jeu.undo)
+        self.bind("<Command-r>", self.jeu.reset)
 
     def options(self):
         """Choice of the number of lines and columns for the grid"""
@@ -366,6 +376,5 @@ class Ping(Frame):
 
 
 if __name__ == '__main__':
-    game = tkinter.Tk()
-    Pg = Ping(game)
-    tkinter.mainloop()
+    P4 = PowerFourGUI()
+    P4.mainloop()
