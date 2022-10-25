@@ -66,6 +66,8 @@ class Panel(Frame):
         # cases (squared) of the grid, et the dimensions of the
         # canvas are adapted in consequence.
         super().__init__()
+        self.master.geometry("400x300")
+        self.master.title(" Game of power four - Two Player")
         self.n_row, self.n_col = 6, 7  # initial grid = 6*7
         # Link of the event <resize> with an adapted manager :
         self.bind("<Configure>", self.rescale)
@@ -89,7 +91,7 @@ class Panel(Frame):
         self.turn_bis = self.can_bis.create_oval(x1, y1, x2, y2, outline="grey",
                                                  width=1, fill="yellow")
         # self.can_bis = Label(text="Red's\n turn")
-        self.can_bis.pack(side=tkinter.RIGHT)
+        self.can_bis.pack(side=tkinter.RIGHT, expand=tkinter.YES)
         self.player = 1  # TODO = to change color of first player.
         # construction of a list of lists
         self.state = SuperMatrix(2, self.n_row, self.n_col)
@@ -282,8 +284,8 @@ class Ping(Frame):
 
     def __init__(self, root):
         super().__init__(root)
-        self.master.geometry("400x300")
-        self.master.title(" Game of power four - Two Player")
+        # self.master.geometry("400x300")
+        # self.master.title(" Game of power four - Two Player")
 
         self.m_bar = MenuBar(self)
         self.m_bar.pack(side=tkinter.TOP, expand=tkinter.NO, fill=tkinter.X)
@@ -366,4 +368,4 @@ class Ping(Frame):
 if __name__ == '__main__':
     game = tkinter.Tk()
     Pg = Ping(game)
-    Pg.mainloop()
+    tkinter.mainloop()
