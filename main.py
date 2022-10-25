@@ -121,7 +121,7 @@ class Panel(Frame):
         # contain all the new sizes of the panel :
         self.width, self.height = event.width - 4, event.height - 4
         # The subtraction of 4 pixels allows to compensate the width
-        # of the 'highlightbordure' rolling the canvas)
+        # of the 'highlight bordure' rolling the canvas
         self.trace_grille()
 
     def trace_grille(self):
