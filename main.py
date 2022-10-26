@@ -277,15 +277,15 @@ class GridGUI(Frame):
                                  highlightbackground="white")
         self.side_panel.pack(side=tkinter.RIGHT,
                              expand=tkinter.YES, fill=tkinter.BOTH)
-        side_canvas = tkinter.Canvas(self.side_panel,
-                                     bg="white", borderwidth=0,
-                                     highlightthickness=0,
-                                     width=80, height=80)
-        side_canvas.place(relx=0.5, rely=0.666, anchor="center")
-        circle = side_canvas.create_oval(0, 0, 79, 79,
-                                         outline="grey",
-                                         width=1,  fill="red")
-        _circle_player = (side_canvas, circle)
+        _side_canvas = tkinter.Canvas(self.side_panel,
+                                      bg="white", borderwidth=0,
+                                      highlightthickness=0,
+                                      width=80, height=80)
+        _side_canvas.place(relx=0.5, rely=0.666, anchor="center")
+        _circle = _side_canvas.create_oval(0, 0, 79, 79,
+                                           outline="grey",
+                                           width=1,  fill="red")
+        _circle_player = (_side_canvas, _circle)
 
         def _config_circle(fill):
             _circle_player[0].itemconfig(_circle_player[1], fill=fill)
