@@ -146,9 +146,9 @@ class GridGUI(Frame):
         self.can_grid = Canvas(self, bg="dark blue", borderwidth=0,
                                highlightthickness=1,
                                highlightbackground="white")
+        self.can_grid.pack(side=tkinter.LEFT)
         # Link of the event <click of the mouse> with its manager :
         self.can_grid.bind("<Button-1>", self.click)
-        self.can_grid.pack(side=tkinter.LEFT)
 
         self.side_panel = Canvas(self, bg="white", borderwidth=2,
                                  highlightthickness=0,
@@ -173,8 +173,6 @@ class GridGUI(Frame):
                                      bg="white",
                                      borderwidth=0)
         self.message.place(relx=0.5, rely=0.35, anchor="center")
-        self.side_panel.pack(side=tkinter.RIGHT,
-                             expand=tkinter.YES, fill=tkinter.BOTH)
         # construction of a list of lists
         self.grid = PowerFour(6, 7)  # default values : 6*7
         self.history = tools.SimpleHistoric()
