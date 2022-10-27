@@ -12,8 +12,10 @@
 """
 import tkinter
 from tkinter import Frame, Canvas, Toplevel, Scale, Message
-from abc import ABC, abstractmethod
 from super_matrix import SuperMatrix
+
+from game_tools import gui, tools
+# see https://github.com/Darkduv/Games # -> game_tools
 
 
 # Todo : possibilities of variations :
@@ -24,132 +26,8 @@ from super_matrix import SuperMatrix
 
 # Todo 1: keyboard shortcuts like cmd + U for Undo, etc...  -> Partly done
 
-class EmptyHistoricError(Exception):
-    """Raise when trying accessing a value of an empty historic"""
 
-
-class InvalidActionError(Exception):
-    """Raise when trying to make an invalid action"""
-
-
-EmptyHistoric = EmptyHistoricError()
-InvalidAction = InvalidActionError()
-
-
-class SimpleHistoric:
-    """For keeping track of the actions"""
-
-    def __init__(self, l_saves: list = None, current_undo: list = None):
-        if l_saves is None:
-            l_saves = []
-        if current_undo is None:
-            current_undo = []
-        self.l_saves = l_saves
-        self.current_undo = current_undo
-
-    def save_new(self, save):
-        """Save a state or an action"""
-        self.l_saves.append(save)
-        self.current_undo = []
-
-    def undo(self):
-        if not self.l_saves:
-            raise EmptyHistoric
-        save = self.l_saves.pop(-1)
-        self.current_undo.append(save)
-        return save
-
-    def redo(self):
-        if not self.current_undo:
-            raise EmptyHistoric
-        save = self.current_undo.pop(-1)
-        self.l_saves.append(save)
-        return save
-
-
-class GameNPlayer(ABC):
-    """Skeleton of a game of N players"""
-
-    def __init__(self, nb_players=2):
-        self.nb_players = nb_players
-        self.player = 0  # player currently playing
-        self.turn = 0  # nb round/turn
-
-    @abstractmethod
-    def play(self, action) -> bool:
-        """Must implement the given action. Return if the player wins."""
-
-    @abstractmethod
-    def can_play(self) -> bool:
-        """Can the current player play ?"""
-
-    @abstractmethod
-    def possible_actions(self):
-        """Get the possibles actions for the current player"""
-
-    @abstractmethod
-    def win(self, action) -> int:
-        """if winning, return the id of the player winning. else -1"""
-
-    def next_player(self):
-        """Update new id player"""
-        self.player += 1
-        self.player %= self.nb_players
-
-    def undo_action(self, action):
-        """ Undo the action """
-        raise NotImplemented
-
-    def redo_action(self, action_or_state):
-        """ Redo the action """
-        raise NotImplemented
-
-    def apply(self, state_saved):
-        """Set game to the given state"""
-        raise NotImplemented
-
-    @abstractmethod
-    def init_game(self, *args, **kwargs):
-        """ (Re) initialize the game """
-
-    def copy(self) -> "GameNPlayer":
-        """ Copy the object """
-        raise NotImplemented
-
-    def export_save(self):
-        """ Export/Save the game in a lighter way than copying"""
-        raise NotImplemented
-
-
-class MenuBar(tkinter.Menu):
-
-    def __init__(self, root=None):
-        super().__init__(root)
-        root.config(menu=self)
-
-    def config_menu(self, hierarchy, parent: tkinter.Menu = None):
-        if parent is None:
-            parent = self
-            # underline = 0
-        else:
-            # underline = None
-            pass
-
-        for option in hierarchy:
-            if option is None:
-                parent.add_separator()
-                continue
-            label, menu_command = option
-
-            if isinstance(menu_command, list):
-                menu = tkinter.Menu(parent, tearoff=0)
-                self.config_menu(menu_command, parent=menu)
-                parent.add_cascade(label=label, menu=menu)
-            else:
-                parent.add_command(label=label, command=menu_command)
-
-
-class PowerFour(GameNPlayer):
+class PowerFour(tools.GameNPlayer):
     _nb_players = 2
     _not_a_player = -1
 
@@ -167,14 +45,14 @@ class PowerFour(GameNPlayer):
 
     def play(self, col: int) -> int:
         if 0 > col or self.n_cols <= col:
-            raise InvalidActionError("Col not in the good range")
+            raise tools.InvalidActionError("Col not in the good range")
         row = 0
         while row < self.n_rows \
                 and self.grid[row][col] == self._not_a_player:
             row += 1
         row -= 1
         if row == -1:
-            raise InvalidActionError("Column is filled")
+            raise tools.InvalidActionError("Column is filled")
         self.grid[row][col] = self.player
         win = self.win(col)  # todo : efficient winning test
 
@@ -299,7 +177,7 @@ class GridGUI(Frame):
                              expand=tkinter.YES, fill=tkinter.BOTH)
         # construction of a list of lists
         self.grid = PowerFour(6, 7)  # default values : 6*7
-        self.history = SimpleHistoric()
+        self.history = tools.SimpleHistoric()
         self.width, self.height = 2, 2
         self.cote = 0
         self.win = False
@@ -372,7 +250,7 @@ class GridGUI(Frame):
         # row, int(event.y / self.cote),
         col = int(event.x / self.cote)
         if not 0 <= col < self.grid.n_cols:
-            raise InvalidActionError(
+            raise tools.InvalidActionError(
                 "Click in the grid to make a valid action")
 
         player = self.grid.player
@@ -472,7 +350,7 @@ class PowerFourGUI(tkinter.Tk):
             ])
         ]
 
-        self.m_bar = MenuBar(self)
+        self.m_bar = gui.RecursiveMenuBar(self)
         self.m_bar.config_menu(menu_config)
 
         self.game.pack(expand=tkinter.YES, fill=tkinter.BOTH, padx=8, pady=8)
